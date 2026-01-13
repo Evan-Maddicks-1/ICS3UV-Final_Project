@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "justjavac.vscode-deno-extensionpack",
+    "golang.go",
+    "medo64.render-crlf"
+  ]
+}
