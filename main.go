@@ -14,10 +14,12 @@ import (
 const size = 8
 
 const (
-	White = "♙"
-	Black = "♟"
-	Empty = "□"
-	Dark  = "■"
+	White     = "♙"
+	Black     = "♟"
+	WhiteKing = "♔"
+	BlackKing = "♚"
+	Empty     = "□"
+	Dark      = "■"
 )
 
 func main() {
@@ -28,11 +30,12 @@ func main() {
 	for r := 0; r < size; r++ {
 		for c := 0; c < size; c++ {
 			if (r+c)%2 == 1 {
-				if r < 3 {
+				switch {
+				case r < 3:
 					board[r][c] = White
-				} else if r > 4 {
+				case r > 4:
 					board[r][c] = Black
-				} else {
+				default:
 					board[r][c] = Empty
 				}
 			} else {
@@ -43,21 +46,35 @@ func main() {
 
 	for {
 		printBoard(board)
-		fmt.Println("Player:", player)
 
-		var fc, tc string
-		var fr, tr int
-
-		fmt.Print("Move (example: B 3 C 4): ")
-		fmt.Scan(&fc, &fr, &tc, &tr)
-
-		fc = strings.ToUpper(fc)
-		tc = strings.ToUpper(tc)
-
-		if len(fc) != 1 || len(tc) != 1 {
-			fmt.Println("Invalid input")
-			continue
+		// Check win
+		if checkWin(board, White) {
+			fmt.Println("White wins!")
+			break
 		}
+		if checkWin(board, Black) {
+			fmt.Println("Black wins!")
+			break
+		}
+
+		fmt.Println("Player:", player)
+		fmt.Print("Move (example: B 3 C 4 or QUIT): ")
+
+		var fc string
+		fmt.Scan(&fc)
+		fc = strings.ToUpper(fc)
+
+		if fc == "QUIT" {
+			fmt.Println("Game quit.")
+			break
+		}
+
+		var fr int
+		var tc string
+		var tr int
+		fmt.Scan(&fr, &tc, &tr)
+
+		tc = strings.ToUpper(tc)
 
 		fr--
 		tr--
@@ -65,15 +82,22 @@ func main() {
 		tcIndex := int(tc[0] - 'A')
 
 		if validMove(board, player, fr, fcIndex, tr, tcIndex) {
-			// Check for jump
+			// Jump removal
 			if abs(tr-fr) == 2 {
-				midR := (fr + tr) / 2
-				midC := (fcIndex + tcIndex) / 2
-				board[midR][midC] = Empty
+				board[(fr+tr)/2][(fcIndex+tcIndex)/2] = Empty
 			}
 
-			board[tr][tcIndex] = player
+			// Move piece
+			board[tr][tcIndex] = board[fr][fcIndex]
 			board[fr][fcIndex] = Empty
+
+			// Kinging
+			if board[tr][tcIndex] == White && tr == size-1 {
+				board[tr][tcIndex] = WhiteKing
+			}
+			if board[tr][tcIndex] == Black && tr == 0 {
+				board[tr][tcIndex] = BlackKing
+			}
 
 			// Switch player
 			if player == White {
@@ -81,12 +105,14 @@ func main() {
 			} else {
 				player = White
 			}
+
 		} else {
 			fmt.Println("Invalid move")
 		}
 	}
 }
 
+// Print the board
 func printBoard(b [size][size]string) {
 	fmt.Println("\n  A B C D E F G H")
 	for r := 0; r < size; r++ {
@@ -98,14 +124,15 @@ func printBoard(b [size][size]string) {
 	}
 }
 
+// Check if a move is valid
 func validMove(b [size][size]string, p string, fr, fc, tr, tc int) bool {
-	// Bounds check
 	if fr < 0 || fr >= size || fc < 0 || fc >= size ||
 		tr < 0 || tr >= size || tc < 0 || tc >= size {
 		return false
 	}
 
-	if b[fr][fc] != p || b[tr][tc] != Empty {
+	piece := b[fr][fc]
+	if !isPlayersPiece(piece, p) || b[tr][tc] != Empty {
 		return false
 	}
 
@@ -114,38 +141,57 @@ func validMove(b [size][size]string, p string, fr, fc, tr, tc int) bool {
 
 	// Normal move
 	if abs(rowDiff) == 1 && abs(colDiff) == 1 {
-		if p == White && rowDiff == 1 {
-			return true
-		}
-		if p == Black && rowDiff == -1 {
-			return true
-		}
+		return validDirection(piece, rowDiff)
 	}
 
 	// Jump move
 	if abs(rowDiff) == 2 && abs(colDiff) == 2 {
 		midR := (fr + tr) / 2
 		midC := (fc + tc) / 2
-
-		if p == White && rowDiff != 2 {
-			return false
-		}
-		if p == Black && rowDiff != -2 {
-			return false
-		}
-
-		// Must jump opponent
-		if p == White && b[midR][midC] == Black {
-			return true
-		}
-		if p == Black && b[midR][midC] == White {
-			return true
-		}
+		return validDirection(piece, rowDiff) && isOpponentPiece(piece, b[midR][midC])
 	}
 
 	return false
 }
 
+// Check if piece moves in correct direction
+func validDirection(piece string, rowDiff int) bool {
+	switch piece {
+	case White:
+		return rowDiff == 1 || rowDiff == 2
+	case Black:
+		return rowDiff == -1 || rowDiff == -2
+	case WhiteKing, BlackKing:
+		return abs(rowDiff) == 1 || abs(rowDiff) == 2
+	}
+	return false
+}
+
+// Check if piece belongs to current player
+func isPlayersPiece(piece, player string) bool {
+	return (player == White && (piece == White || piece == WhiteKing)) ||
+		(player == Black && (piece == Black || piece == BlackKing))
+}
+
+// Check if piece belongs to opponent
+func isOpponentPiece(piece, target string) bool {
+	return (piece == White || piece == WhiteKing) && (target == Black || target == BlackKing) ||
+		(piece == Black || piece == BlackKing) && (target == White || target == WhiteKing)
+}
+
+// Check if a player has no pieces left
+func checkWin(b [size][size]string, player string) bool {
+	for r := 0; r < size; r++ {
+		for c := 0; c < size; c++ {
+			if isPlayersPiece(b[r][c], player) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// Absolute value
 func abs(x int) int {
 	if x < 0 {
 		return -x
