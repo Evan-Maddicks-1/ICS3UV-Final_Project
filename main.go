@@ -16,8 +16,8 @@ const boardSize = 8
 const (
 	White     = "♙"
 	Black     = "♟"
-	WhiteKing = "♔"
-	BlackKing = "♚"
+	whiteKing = "♔"
+	blackKing = "♚"
 	Empty     = "□"
 	Dark      = "■"
 )
@@ -134,10 +134,10 @@ func makeMove(board *[boardSize][boardSize]string, fr, fc, tr, tc int) {
 	board[fr][fc] = Empty
 
 	if board[tr][tc] == White && tr == boardSize-1 {
-		board[tr][tc] = WhiteKing
+		board[tr][tc] = whiteKing
 	}
 	if board[tr][tc] == Black && tr == 0 {
-		board[tr][tc] = BlackKing
+		board[tr][tc] = blackKing
 	}
 }
 
@@ -153,9 +153,9 @@ func correctDirection(piece string, rowDiff int) bool {
 
 func isPlayersPiece(piece, player string) bool {
 	if player == White {
-		return piece == White || piece == WhiteKing
+		return piece == White || piece == whiteKing
 	}
-	return piece == Black || piece == BlackKing
+	return piece == Black || piece == blackKing
 }
 
 func isOpponent(piece, target string) bool {
